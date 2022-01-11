@@ -1,0 +1,60 @@
+import sqlite3
+import discord
+from discord.ext import commands
+import nest_asyncio
+import asyncio
+
+nest_asyncio.apply()
+
+TOKEN = ""
+
+client = commands.Bot(command_prefix="%")
+
+@client.event
+async def on_ready():
+    print("We have logged in as {0.user}".format(client))
+    
+    
+@client.command()
+async def reminderset(ctx, *, message):
+    connector = sqlite3.connect("reminder.db")
+    cursor = connector.cursor()
+
+    messagesplit = message.split(" - ")
+    reminder = messagesplit[-1]
+    timestatement = messagesplit[0]
+    timestatement = timestatement.split(" ")
+        
+    hours = int(timestatement[0])
+    minutes = int(timestatement[2])
+    #print(hours, minutes)
+   
+    delay = (hours * 360) + (minutes * 60)
+    cursor.execute("INSERT INTO Reminders VALUES (?, ?)", (reminder , delay))
+    
+    cursor.execute("SELECT rowid, * FROM Reminders")
+    print(cursor.fetchall())
+
+    await ctx.send(f'Reminder set: {reminder} in {delay} seconds')
+    await asyncio.sleep(delay)
+    await ctx.send(f'{ctx.author.mention} {reminder}')
+    cursor.execute("DELETE FROM Reminders WHERE Notice = ?", 
+                (reminder,)
+                )
+    print(cursor.fetchall())    
+    connector.commit()
+    connector.close()
+
+# Format: %reminderset # hours # minutes - *reminder*
+
+client.run(TOKEN)
+
+# SQL 
+
+# cursor.execute("DROP TABLE Reminders")
+
+# cursor.execute("""CREATE TABLE Reminders (
+#                 Notice TEXT,
+#                 Time TEXT
+#                 )
+#                 """)
